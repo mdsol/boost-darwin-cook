@@ -42,8 +42,8 @@
 : ${OSXFRAMEWORKDIR:=`pwd`/osx/framework}
 : ${COMPILER:="clang++"}
 
-: ${BOOST_VERSION:=1.55.0}
-: ${BOOST_VERSION2:=1_55_0}
+: ${BOOST_VERSION:=1.54.0}
+: ${BOOST_VERSION2:=1_54_0}
 
 BOOST_TARBALL=$TARBALLDIR/boost_$BOOST_VERSION2.tar.bz2
 BOOST_SRC=$SRCDIR/boost_${BOOST_VERSION2}
@@ -243,9 +243,9 @@ scrunchAllLibsTogetherInOneLibPerPlatform()
     done
 
     echo "Creating Universal .a files"
-    for NAME in $ALL_LIBS; do
+    for NAME in $BOOST_LIBS; do
         echo Creating $NAME ...
-        $ARM_DEV_CMD lipo -create $IOSBUILDDIR/*/$NAME -output $IOSBUILDDIR/$NAME
+        $ARM_DEV_CMD lipo -create "iphone-build/stage/lib/libboost_$NAME.a" "iphonesim-build/stage/lib/libboost_$NAME.a" -output $IOSBUILDDIR/libboost_$NAME.a
     done
 
     echo "Linking each architecture into an uberlib ($ALL_LIBS => libboost.a )"
