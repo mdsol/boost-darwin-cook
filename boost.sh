@@ -186,11 +186,11 @@ buildBoostForIPhoneOS()
     : ${IPHONESIM_SDK_DIR=`xcodebuild -version -sdk iphonesimulator Path`}
 
     # Install this one so we can copy the includes for the frameworks...
-    ./bjam -j16 --build-dir=iphone-build --stagedir=iphone-build/stage --prefix=$PREFIXDIR -sZLIB_LIBPATH="$IPHONEOS_SDK_DIR/usr/lib" -sZLIB_INCLUDE="$IPHONEOS_SDK_DIR/usr/include" -sZLIB_BINARY=z toolset=darwin architecture=arm target-os=iphone macosx-version=iphone-${IPHONE_SDKVERSION} define=_LITTLE_ENDIAN link=static stage
-    ./bjam -j16 --build-dir=iphone-build --stagedir=iphone-build/stage --prefix=$PREFIXDIR -sZLIB_LIBPATH="$IPHONEOS_SDK_DIR/usr/lib" -sZLIB_INCLUDE="$IPHONEOS_SDK_DIR/usr/include" -sZLIB_BINARY=z toolset=darwin architecture=arm target-os=iphone macosx-version=iphone-${IPHONE_SDKVERSION} define=_LITTLE_ENDIAN link=static install
+    ./bjam -j16 --build-dir=iphone-build --stagedir=iphone-build/stage --prefix=$PREFIXDIR -sZLIB_LIBPATH="$IPHONEOS_SDK_DIR/usr/lib" -sZLIB_INCLUDE="$IPHONEOS_SDK_DIR/usr/include" -sZLIB_BINARY=z -sNO_BZIP2=1 toolset=darwin architecture=arm target-os=iphone macosx-version=iphone-${IPHONE_SDKVERSION} define=_LITTLE_ENDIAN link=static stage
+    ./bjam -j16 --build-dir=iphone-build --stagedir=iphone-build/stage --prefix=$PREFIXDIR -sZLIB_LIBPATH="$IPHONEOS_SDK_DIR/usr/lib" -sZLIB_INCLUDE="$IPHONEOS_SDK_DIR/usr/include" -sZLIB_BINARY=z -sNO_BZIP2=1 toolset=darwin architecture=arm target-os=iphone macosx-version=iphone-${IPHONE_SDKVERSION} define=_LITTLE_ENDIAN link=static install
     doneSection
 
-    ./bjam -j16 --build-dir=iphonesim-build --stagedir=iphonesim-build/stage -sZLIB_LIBPATH="$IPHONESIM_SDK_DIR/usr/lib" -sZLIB_INCLUDE="$IPHONESIM_SDK_DIR/usr/include" -sZLIB_BINARY=z --toolset=darwin-${IPHONE_SDKVERSION}~iphonesim architecture=x86 target-os=iphone macosx-version=iphonesim-${IPHONE_SDKVERSION} link=static stage
+    ./bjam -j16 --build-dir=iphonesim-build --stagedir=iphonesim-build/stage -sZLIB_LIBPATH="$IPHONESIM_SDK_DIR/usr/lib" -sZLIB_INCLUDE="$IPHONESIM_SDK_DIR/usr/include" -sZLIB_BINARY=z -sNO_BZIP2=1 --toolset=darwin-${IPHONE_SDKVERSION}~iphonesim architecture=x86 target-os=iphone macosx-version=iphonesim-${IPHONE_SDKVERSION} link=static stage
     doneSection
 
     ./b2 -j16 --build-dir=osx-build --stagedir=osx-build/stage toolset=clang cxxflags="-std=c++03 -stdlib=libc++ -arch i386 -arch x86_64" linkflags="-stdlib=libc++" link=static threading=multi stage
