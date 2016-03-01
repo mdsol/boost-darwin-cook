@@ -140,12 +140,12 @@ updateBoost()
 using darwin : ${IPHONE_SDKVERSION}~iphone
 : $XCODE_ROOT/Toolchains/XcodeDefault.xctoolchain/usr/bin/$COMPILER -arch armv7 -arch arm64 -fvisibility=hidden -fvisibility-inlines-hidden $EXTRA_CPPFLAGS
 : <striper> <root>$XCODE_ROOT/Platforms/iPhoneOS.platform/Developer
-: <architecture>arm <target-os>iphone
+: <target-os>iphone
 ;
 using darwin : ${IPHONE_SDKVERSION}~iphonesim
 : $XCODE_ROOT/Toolchains/XcodeDefault.xctoolchain/usr/bin/$COMPILER -arch i386 -arch x86_64 -fvisibility=hidden -fvisibility-inlines-hidden $EXTRA_CPPFLAGS
 : <striper> <root>$XCODE_ROOT/Platforms/iPhoneSimulator.platform/Developer
-: <architecture>x86 <target-os>iphone
+: <target-os>iphone
 ;
 EOF
 
@@ -186,8 +186,8 @@ buildBoostForIPhoneOS()
     : ${IPHONESIM_SDK_DIR=`xcodebuild -version -sdk iphonesimulator Path`}
 
     # Install this one so we can copy the includes for the frameworks...
-    ./bjam -j16 --build-dir=iphone-build --stagedir=iphone-build/stage --prefix=$PREFIXDIR -sZLIB_LIBPATH="$IPHONEOS_SDK_DIR/usr/lib" -sZLIB_INCLUDE="$IPHONEOS_SDK_DIR/usr/include" -sZLIB_BINARY=z -sNO_BZIP2=1 toolset=darwin architecture=arm target-os=iphone macosx-version=iphone-${IPHONE_SDKVERSION} define=_LITTLE_ENDIAN link=static stage
-    ./bjam -j16 --build-dir=iphone-build --stagedir=iphone-build/stage --prefix=$PREFIXDIR -sZLIB_LIBPATH="$IPHONEOS_SDK_DIR/usr/lib" -sZLIB_INCLUDE="$IPHONEOS_SDK_DIR/usr/include" -sZLIB_BINARY=z -sNO_BZIP2=1 toolset=darwin architecture=arm target-os=iphone macosx-version=iphone-${IPHONE_SDKVERSION} define=_LITTLE_ENDIAN link=static install
+    ./bjam -j16 --build-dir=iphone-build --stagedir=iphone-build/stage --prefix=$PREFIXDIR -sZLIB_LIBPATH="$IPHONEOS_SDK_DIR/usr/lib" -sZLIB_INCLUDE="$IPHONEOS_SDK_DIR/usr/include" -sZLIB_BINARY=z -sNO_BZIP2=1 toolset=darwin target-os=iphone define=_LITTLE_ENDIAN link=static stage
+    ./bjam -j16 --build-dir=iphone-build --stagedir=iphone-build/stage --prefix=$PREFIXDIR -sZLIB_LIBPATH="$IPHONEOS_SDK_DIR/usr/lib" -sZLIB_INCLUDE="$IPHONEOS_SDK_DIR/usr/include" -sZLIB_BINARY=z -sNO_BZIP2=1 toolset=darwin target-os=iphone define=_LITTLE_ENDIAN link=static install
     doneSection
 
     ./bjam -j16 --build-dir=iphonesim-build --stagedir=iphonesim-build/stage -sZLIB_LIBPATH="$IPHONESIM_SDK_DIR/usr/lib" -sZLIB_INCLUDE="$IPHONESIM_SDK_DIR/usr/include" -sZLIB_BINARY=z -sNO_BZIP2=1 --toolset=darwin-${IPHONE_SDKVERSION}~iphonesim architecture=x86 target-os=iphone macosx-version=iphonesim-${IPHONE_SDKVERSION} link=static stage
@@ -217,9 +217,6 @@ scrunchAllLibsTogetherInOneLibPerPlatform()
 
     for NAME in $BOOST_LIBS; do
         ALL_LIBS="$ALL_LIBS libboost_$NAME.a"
-
-        # not sure where arch armv4t is coming from - strip it
-        $ARM_DEV_CMD lipo "iphone-build/stage/lib/libboost_$NAME.a" -remove armv4t "iphone-build/stage/lib/libboost_$NAME.a"
 
         $ARM_DEV_CMD lipo "iphone-build/stage/lib/libboost_$NAME.a" -thin armv7 -o $IOSBUILDDIR/armv7/libboost_$NAME.a
         $ARM_DEV_CMD lipo "iphone-build/stage/lib/libboost_$NAME.a" -thin arm64 -o $IOSBUILDDIR/arm64/libboost_$NAME.a
@@ -368,7 +365,6 @@ buildBoostForIPhoneOS
 scrunchAllLibsTogetherInOneLibPerPlatform
 buildFramework $IOSFRAMEWORKDIR $IOSBUILDDIR
 buildFramework $OSXFRAMEWORKDIR $OSXBUILDDIR
-
 restoreBoost
 
 echo "Completed successfully"
