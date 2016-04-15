@@ -23,7 +23,7 @@
 : ${IPHONE_SDKVERSION:=`xcodebuild -showsdks | grep iphoneos | egrep "[[:digit:]]+\.[[:digit:]]+" -o | tail -1`}
 : ${IPHONE_MIN_SDKVERSION:=8.0}
 : ${XCODE_ROOT:=`xcode-select -print-path`}
-: ${EXTRA_CPPFLAGS:="-DBOOST_AC_USE_PTHREADS -DBOOST_SP_USE_PTHREADS -std=c++11 -stdlib=libc++ -miphoneos-version-min=8.0 -fembed-bitcode"}
+: ${EXTRA_CPPFLAGS:="-DBOOST_AC_USE_PTHREADS -DBOOST_SP_USE_PTHREADS -std=c++11 -stdlib=libc++ -miphoneos-version-min=$IPHONE_MIN_SDKVERSION -fembed-bitcode"}
 
 # The EXTRA_CPPFLAGS definition works around a thread race issue in
 # shared_ptr. I encountered this historically and have not verified that
