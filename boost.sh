@@ -21,9 +21,9 @@
 
 : ${BOOST_LIBS:="atomic random regex graph random chrono thread signals filesystem system date_time iostreams program_options"}
 : ${IPHONE_SDKVERSION:=`xcodebuild -showsdks | grep iphoneos | egrep "[[:digit:]]+\.[[:digit:]]+" -o | tail -1`}
-: ${OSX_SDKVERSION:=10.9}
+: ${IPHONE_MIN_SDKVERSION:=8.0}
 : ${XCODE_ROOT:=`xcode-select -print-path`}
-: ${EXTRA_CPPFLAGS:="-DBOOST_AC_USE_PTHREADS -DBOOST_SP_USE_PTHREADS -std=c++11 -stdlib=libc++ -miphoneos-version-min=8.0"}
+: ${EXTRA_CPPFLAGS:="-DBOOST_AC_USE_PTHREADS -DBOOST_SP_USE_PTHREADS -std=c++11 -stdlib=libc++ -miphoneos-version-min=8.0 -fembed-bitcode"}
 
 # The EXTRA_CPPFLAGS definition works around a thread race issue in
 # shared_ptr. I encountered this historically and have not verified that
@@ -36,11 +36,11 @@
 : ${TARBALLDIR:=`pwd`}
 : ${SRCDIR:=`pwd`/src}
 : ${IOSBUILDDIR:=`pwd`/ios/build}
-: ${OSXBUILDDIR:=`pwd`/osx/build}
 : ${PREFIXDIR:=`pwd`/ios/prefix}
 : ${IOSFRAMEWORKDIR:=`pwd`/ios/framework}
-: ${OSXFRAMEWORKDIR:=`pwd`/osx/framework}
 : ${COMPILER:="clang++"}
+: ${IPHONEOS_SDK_DIR=`xcodebuild -version -sdk iphoneos Path`}
+: ${IPHONESIM_SDK_DIR=`xcodebuild -version -sdk iphonesimulator Path`}
 
 : ${BOOST_VERSION:=1.54.0}
 : ${BOOST_VERSION2:=1_54_0}
@@ -51,7 +51,6 @@ BOOST_SRC=$SRCDIR/boost_${BOOST_VERSION2}
 #===============================================================================
 ARM_DEV_CMD="xcrun --sdk iphoneos"
 SIM_DEV_CMD="xcrun --sdk iphonesimulator"
-OSX_DEV_CMD="xcrun --sdk macosx"
 
 ARM_COMBINED_LIB=$IOSBUILDDIR/lib_boost_arm.a
 SIM_COMBINED_LIB=$IOSBUILDDIR/lib_boost_x86.a
@@ -84,12 +83,10 @@ cleanEverythingReadyToStart()
 {
     echo Cleaning everything before we start to build...
 
-    rm -rf iphone-build iphonesim-build osx-build
+    rm -rf iphone-build iphonesim-build
     rm -rf $IOSBUILDDIR
-    rm -rf $OSXBUILDDIR
     rm -rf $PREFIXDIR
     rm -rf $IOSFRAMEWORKDIR/$FRAMEWORK_NAME.framework
-    rm -rf $OSXFRAMEWORKDIR/$FRAMEWORK_NAME.framework
 
     doneSection
 }
@@ -137,14 +134,15 @@ updateBoost()
     cp $BOOST_SRC/tools/build/v2/user-config.jam $BOOST_SRC/tools/build/v2/user-config.jam-bk
 
     cat >> $BOOST_SRC/tools/build/v2/user-config.jam <<EOF
+
 using darwin : ${IPHONE_SDKVERSION}~iphone
-: $XCODE_ROOT/Toolchains/XcodeDefault.xctoolchain/usr/bin/$COMPILER -arch armv7 -arch arm64 -fvisibility=hidden -fvisibility-inlines-hidden $EXTRA_CPPFLAGS
-: <striper> <root>$XCODE_ROOT/Platforms/iPhoneOS.platform/Developer
+: $XCODE_ROOT/Toolchains/XcodeDefault.xctoolchain/usr/bin/$COMPILER -arch armv7 -arch arm64 -fvisibility=hidden -fvisibility-inlines-hidden $EXTRA_CPPFLAGS -isysroot $IPHONEOS_SDK_DIR
+: <striper> <root>$IPHONEOS_SDK_DIR
 : <target-os>iphone
 ;
 using darwin : ${IPHONE_SDKVERSION}~iphonesim
-: $XCODE_ROOT/Toolchains/XcodeDefault.xctoolchain/usr/bin/$COMPILER -arch i386 -arch x86_64 -fvisibility=hidden -fvisibility-inlines-hidden $EXTRA_CPPFLAGS
-: <striper> <root>$XCODE_ROOT/Platforms/iPhoneSimulator.platform/Developer
+: $XCODE_ROOT/Toolchains/XcodeDefault.xctoolchain/usr/bin/$COMPILER -arch i386 -arch x86_64 -fvisibility=hidden -fvisibility-inlines-hidden $EXTRA_CPPFLAGS -isysroot $IPHONESIM_SDK_DIR
+: <striper> <root>$IPHONESIM_SDK_DIR
 : <target-os>iphone
 ;
 EOF
@@ -182,18 +180,13 @@ bootstrapBoost()
 buildBoostForIPhoneOS()
 {
     cd $BOOST_SRC
-    : ${IPHONEOS_SDK_DIR=`xcodebuild -version -sdk iphoneos Path`}
-    : ${IPHONESIM_SDK_DIR=`xcodebuild -version -sdk iphonesimulator Path`}
 
     # Install this one so we can copy the includes for the frameworks...
-    ./bjam -j16 --build-dir=iphone-build --stagedir=iphone-build/stage --prefix=$PREFIXDIR -sZLIB_LIBPATH="$IPHONEOS_SDK_DIR/usr/lib" -sZLIB_INCLUDE="$IPHONEOS_SDK_DIR/usr/include" -sZLIB_BINARY=z -sNO_BZIP2=1 toolset=darwin target-os=iphone define=_LITTLE_ENDIAN link=static stage
-    ./bjam -j16 --build-dir=iphone-build --stagedir=iphone-build/stage --prefix=$PREFIXDIR -sZLIB_LIBPATH="$IPHONEOS_SDK_DIR/usr/lib" -sZLIB_INCLUDE="$IPHONEOS_SDK_DIR/usr/include" -sZLIB_BINARY=z -sNO_BZIP2=1 toolset=darwin target-os=iphone define=_LITTLE_ENDIAN link=static install
+    ./bjam -j16 -d+2 --build-dir=iphone-build --stagedir=iphone-build/stage --prefix=$PREFIXDIR -sZLIB_LIBPATH="$IPHONEOS_SDK_DIR/usr/lib" -sZLIB_INCLUDE="$IPHONEOS_SDK_DIR/usr/include" -sZLIB_BINARY=z -sNO_BZIP2=1 toolset=darwin target-os=iphone define=_LITTLE_ENDIAN link=static stage
+    ./bjam -j16 -d+2 --build-dir=iphone-build --stagedir=iphone-build/stage --prefix=$PREFIXDIR -sZLIB_LIBPATH="$IPHONEOS_SDK_DIR/usr/lib" -sZLIB_INCLUDE="$IPHONEOS_SDK_DIR/usr/include" -sZLIB_BINARY=z -sNO_BZIP2=1 toolset=darwin target-os=iphone define=_LITTLE_ENDIAN link=static install
     doneSection
 
-    ./bjam -j16 --build-dir=iphonesim-build --stagedir=iphonesim-build/stage -sZLIB_LIBPATH="$IPHONESIM_SDK_DIR/usr/lib" -sZLIB_INCLUDE="$IPHONESIM_SDK_DIR/usr/include" -sZLIB_BINARY=z -sNO_BZIP2=1 --toolset=darwin-${IPHONE_SDKVERSION}~iphonesim architecture=x86 target-os=iphone macosx-version=iphonesim-${IPHONE_SDKVERSION} link=static stage
-    doneSection
-
-    ./b2 -j16 --build-dir=osx-build --stagedir=osx-build/stage toolset=clang cxxflags="-std=c++03 -stdlib=libc++ -arch i386 -arch x86_64" linkflags="-stdlib=libc++" link=static threading=multi stage
+    ./bjam -j16 -d+2 --build-dir=iphonesim-build --stagedir=iphonesim-build/stage -sZLIB_LIBPATH="$IPHONESIM_SDK_DIR/usr/lib" -sZLIB_INCLUDE="$IPHONESIM_SDK_DIR/usr/include" -sZLIB_BINARY=z -sNO_BZIP2=1 --toolset=darwin-${IPHONE_SDKVERSION}~iphonesim architecture=x86 target-os=iphone link=static stage
     doneSection
 }
 
@@ -208,9 +201,6 @@ scrunchAllLibsTogetherInOneLibPerPlatform()
     mkdir -p $IOSBUILDDIR/i386/obj
 	mkdir -p $IOSBUILDDIR/x86_64/obj
 
-    mkdir -p $OSXBUILDDIR/i386/obj
-    mkdir -p $OSXBUILDDIR/x86_64/obj
-
     ALL_LIBS=""
 
     echo Splitting all existing fat binaries...
@@ -222,20 +212,16 @@ scrunchAllLibsTogetherInOneLibPerPlatform()
         $ARM_DEV_CMD lipo "iphone-build/stage/lib/libboost_$NAME.a" -thin arm64 -o $IOSBUILDDIR/arm64/libboost_$NAME.a
         $ARM_DEV_CMD lipo "iphonesim-build/stage/lib/libboost_$NAME.a" -thin i386 -o $IOSBUILDDIR/i386/libboost_$NAME.a
         $ARM_DEV_CMD lipo "iphonesim-build/stage/lib/libboost_$NAME.a" -thin x86_64 -o $IOSBUILDDIR/x86_64/libboost_$NAME.a
-        $ARM_DEV_CMD lipo "osx-build/stage/lib/libboost_$NAME.a" -thin i386 -o $OSXBUILDDIR/i386/libboost_$NAME.a
-        $ARM_DEV_CMD lipo "osx-build/stage/lib/libboost_$NAME.a" -thin x86_64 -o $OSXBUILDDIR/x86_64/libboost_$NAME.a
     done
 
     echo "Decomposing each architecture's .a files"
 
     for NAME in $ALL_LIBS; do
-        echo Decomposing $NAME...
-        (cd $IOSBUILDDIR/armv7/obj; ar -x ../$NAME );
-	(cd $IOSBUILDDIR/arm64/obj; ar -x ../$NAME );
-        (cd $IOSBUILDDIR/i386/obj; ar -x ../$NAME );
-	(cd $IOSBUILDDIR/x86_64/obj; ar -x ../$NAME );
-        (cd $OSXBUILDDIR/i386/obj; ar -x ../$NAME );
-        (cd $OSXBUILDDIR/x86_64/obj; ar -x ../$NAME );
+       echo Decomposing $NAME...
+       (cd $IOSBUILDDIR/armv7/obj; ar -x ../$NAME );
+	   (cd $IOSBUILDDIR/arm64/obj; ar -x ../$NAME );
+       (cd $IOSBUILDDIR/i386/obj; ar -x ../$NAME );
+	   (cd $IOSBUILDDIR/x86_64/obj; ar -x ../$NAME );
     done
 
     echo "Creating Universal .a files"
@@ -257,12 +243,6 @@ scrunchAllLibsTogetherInOneLibPerPlatform()
     echo ...x86_64
     (cd $IOSBUILDDIR/x86_64;  $SIM_DEV_CMD ar crus libboost.a obj/*.o; )
 
-    rm $OSXBUILDDIR/*/libboost.a
-    echo ...osx-i386
-    (cd $OSXBUILDDIR/i386;  $SIM_DEV_CMD ar crus libboost.a obj/*.o; )
-
-    echo ...x86_64
-    (cd $OSXBUILDDIR/x86_64;  $SIM_DEV_CMD ar crus libboost.a obj/*.o; )
 }
 
 #===============================================================================
@@ -347,10 +327,8 @@ echo "BOOST_VERSION:     $BOOST_VERSION"
 echo "BOOST_LIBS:        $BOOST_LIBS"
 echo "BOOST_SRC:         $BOOST_SRC"
 echo "IOSBUILDDIR:       $IOSBUILDDIR"
-echo "OSXBUILDDIR:       $OSXBUILDDIR"
 echo "PREFIXDIR:         $PREFIXDIR"
 echo "IOSFRAMEWORKDIR:   $IOSFRAMEWORKDIR"
-echo "OSXFRAMEWORKDIR:   $OSXFRAMEWORKDIR"
 echo "IPHONE_SDKVERSION: $IPHONE_SDKVERSION"
 echo "XCODE_ROOT:        $XCODE_ROOT"
 echo "COMPILER:          $COMPILER"
@@ -364,7 +342,6 @@ updateBoost
 buildBoostForIPhoneOS
 scrunchAllLibsTogetherInOneLibPerPlatform
 buildFramework $IOSFRAMEWORKDIR $IOSBUILDDIR
-buildFramework $OSXFRAMEWORKDIR $OSXBUILDDIR
 restoreBoost
 
 echo "Completed successfully"
